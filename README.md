@@ -33,19 +33,19 @@ A web-based English learning tool designed to improve vocabulary efficiency whil
 
 ## ⌨️ 鍵盤快捷鍵 (Hotkeys)
 
-按鍵| 動作| 說明
+按鍵          | 動作    | 說明
 
-Space (空白鍵)| 翻轉卡片| 顯示背面解答與圖片
+Space (空白鍵)| 翻轉卡片 | 顯示背面解答與圖片
 
-Enter (回車鍵)| 朗讀| 重聽當前單字或例句
+Enter (回車鍵)| 朗讀     | 重聽當前單字或例句
 
-數字 1| Again| < 1 分鐘後再次複習
+數字 1        | Again   | < 1 分鐘後再次複習
 
-數字 2| Hard| 插入剩餘卡片的中間位置
+數字 2        | Hard    | 插入剩餘卡片的中間位置
 
-數字 3| Good| 移至本輪練習的末端
+數字 3        | Good    | 移至本輪練習的末端
 
-數字 4| Easy| 從本次練習中畢業 (完成學習)
+數字 4        | Easy    | 從本次練習中畢業 (完成學習)
 
 ## 📊 CSV 檔案格式要求
 
