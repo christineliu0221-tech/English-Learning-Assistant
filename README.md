@@ -1,12 +1,13 @@
 # English-Learning-Assistant
 A web-based English learning tool designed to improve vocabulary efficiency while exploring AI-assisted vibe coding workflows.
-🚀 **SRS 單字記憶艙 (SRS Flashcard Cabin)**
+
+# 🚀 **SRS 單字記憶艙 (SRS Flashcard Cabin)**
 
 這是一個專為「極速學習」打造的單字記憶工具，導入了 Anki 核心的 SRS (Spaced Repetition System) 間隔重複系統。透過精準的演算法與視覺化輔助，幫助使用者將短期記憶高效轉化為長期記憶。
 
 **Smart is the New Sexy. 讓學習變得優雅、高效且毫無阻力。**
 
-##✨ 核心特色
+## ✨ 核心特色
 
 📦 **單一檔案執行**：無需安裝 Node.js 或任何環境。下載 index.html 即可在瀏覽器直接啟動。
 
@@ -20,7 +21,7 @@ A web-based English learning tool designed to improve vocabulary efficiency whil
 
 🎹 **全鍵盤操作**：針對 Power User 設計，無需滑鼠即可完成高強度複習。
 
-##🚀 快速開始
+## 🚀 快速開始
 
 下載本專案的 index.html。
 
@@ -74,7 +75,7 @@ Easy
 
 從本次練習中畢業 (完成學習)
 
-##📊 CSV 檔案格式要求
+## 📊 CSV 檔案格式要求
 
 請準備一個 UTF-8 編碼的 CSV 檔案，欄位順序如下：
 
@@ -92,7 +93,7 @@ Easy
 
 註：第一行可包含標題（若包含「單字」二字系統會自動跳過）。
 
-##🛠️ 技術棧
+## 🛠️ 技術棧
 
 Frontend: React (v18)
 
