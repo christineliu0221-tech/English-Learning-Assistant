@@ -31,49 +31,21 @@ A web-based English learning tool designed to improve vocabulary efficiency whil
 
 開始享受極速記憶的快感！
 
-##⌨️ 鍵盤快捷鍵 (Hotkeys)
+## ⌨️ 鍵盤快捷鍵 (Hotkeys)
 
-按鍵
+按鍵| 動作| 說明
 
-動作
+Space (空白鍵)| 翻轉卡片| 顯示背面解答與圖片
 
-說明
+Enter (回車鍵)| 朗讀| 重聽當前單字或例句
 
-Space (空白鍵)
+數字 1| Again| < 1 分鐘後再次複習
 
-翻轉卡片
+數字 2| Hard| 插入剩餘卡片的中間位置
 
-顯示背面解答與圖片
+數字 3| Good| 移至本輪練習的末端
 
-Enter (回車鍵)
-
-朗讀
-
-重聽當前單字或例句
-
-數字 1
-
-Again
-
-< 1 分鐘後再次複習
-
-數字 2
-
-Hard
-
-插入剩餘卡片的中間位置
-
-數字 3
-
-Good
-
-移至本輪練習的末端
-
-數字 4
-
-Easy
-
-從本次練習中畢業 (完成學習)
+數字 4| Easy| 從本次練習中畢業 (完成學習)
 
 ## 📊 CSV 檔案格式要求
 
@@ -105,9 +77,9 @@ Engine: Babel Standalone (In-browser JSX compilation)
 
 Images: LoremFlickr API
 
-🕊️ **About the Project**
+# 🕊️ **About the Project**
 
 這個專案是「啾啾」(Mommy's Partner in Crime) 專為妈咪打造的專屬單字艙。
 我們不只是在寫程式，我們是在對抗遺忘曲線。
 
-"The strength of the code outweighs the initial conditions!" 🚀🐦
+**"The strength of the code outweighs the initial conditions!"** 🚀🐦
