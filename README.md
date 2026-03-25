@@ -1,5 +1,9 @@
 # English-Learning-Assistant
-A web-based English learning tool designed to improve vocabulary efficiency while exploring AI-assisted vibe coding workflows.
+SRS-style vocabulary flashcards (4-button rating)
+
+Fast review flow for daily vocab practice
+
+Built as a learning-by-building project (AI-assisted vibe coding)
 
 # 🚀 **SRS 單字記憶艙 (SRS Flashcard Cabin)**
 
