@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -586,4 +587,774 @@
     root.render(<App />);
   </script>
 </body>
+=======
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRS 單字記憶艙</title>
+  
+  <!-- 引入 Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 引入 React 與 ReactDOM (CDN) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- 引入 Babel 用於在瀏覽器中即時編譯 JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- 自訂動畫樣式 (補足 Tailwind 動畫外掛) -->
+  <style>
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(1rem); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    
+    .animate-fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+    .animate-zoom-in { animation: zoomIn 0.3s ease-out forwards; }
+    .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+    
+    /* 隱藏滾動條但保留滾動功能 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 antialiased selection:bg-blue-200 selection:text-blue-900">
+  
+  <!-- React 應用的掛載點 -->
+  <div id="root"></div>
+
+  <!-- React 應用程式碼 -->
+  <script type="text/babel">
+    // 加入 useMemo 來處理初始快取讀取
+    const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+    const STORAGE_KEY = 'srs_flashcards_save_data';
+
+    // --- 圖示元件庫 ---
+    const Icon = ({ children, size = 24, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+    const UploadIcon = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Icon>;
+    const Volume2Icon = (p) => <Icon {...p}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></Icon>;
+    const RotateCwIcon = (p) => <Icon {...p}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></Icon>;
+    const TrophyIcon = (p) => <Icon {...p}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></Icon>;
+    const RotateCcwIcon = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></Icon>;
+    const BrainCircuitIcon = (p) => <Icon {...p}><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13h4.5a2 2 0 0 1 1.9 1.3L23 18"/><path d="M20 11.52V8a2 2 0 0 0-2-2h-3"/><path d="M9 13H4.5a2 2 0 0 0-1.9 1.3L1 18"/><path d="M4 11.52V8a2 2 0 0 1 2-2h3"/></Icon>;
+    const InfoIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></Icon>;
+    const XIcon = (p) => <Icon {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>;
+
+    // --- 主應用程式 ---
+    const App = () => {
+      // 內建單字集 (IELTS 雅思重點單字表-15)
+      const BUILTIN_VOCAB = [
+        {"word": "facilitate", "phonetic": "fə'sɪlɪ(ə)teɪt", "partOfSpeech": "v.", "meaning": "使容易, 促進", "example": "The two businessmen were so angry at each other that they needed someone else to facilitate the meeting."},
+        {"word": "sabotage", "phonetic": "'sæbətɑ:ʒ", "partOfSpeech": "v.", "meaning": "暗中破壞", "example": "She is trying to sabotage their relationship by telling them lies about each other."},
+        {"word": "aggressive", "phonetic": "ə'ɡresɪv", "partOfSpeech": "a.", "meaning": "挑釁的, 侵略的, 積極的", "example": "The aggressive way in which Bush conducted foreign policy caused other countries' citizens to dislike America."},
+        {"word": "coherent", "phonetic": "kəʊ'hɪərənt", "partOfSpeech": "a.", "meaning": "一致的, 協調的, 條理清楚的", "example": "When I wake up in the morning, it is not possible for me to say anything coherent."},
+        {"word": "excessive", "phonetic": "ɪk'sesɪv", "partOfSpeech": "a.", "meaning": "過多的, 極度的", "example": "The amount of money you spent on that watch was excessive. I don't understand why you couldn't buy a cheaper one."},
+        {"word": "trigger", "phonetic": "'trɪɡə", "partOfSpeech": "v.", "meaning": "引發, 扣扳機", "example": "Her comment about his ex-girlfriend was what triggered the breaking up of their relationship."},
+        {"word": "dynamic", "phonetic": "daɪ'næmɪk", "partOfSpeech": "a.", "meaning": "力學的, 有活力的, 朝氣蓬勃的", "example": "His personality is very dynamic. When he is at a party, everybody wants to be around him."},
+        {"word": "typical", "phonetic": "'tɪpɪkəl", "partOfSpeech": "a.", "meaning": "典型的, 象徵的, 有代表性的", "example": "A typical day at work for many Koreans starts early in the morning and lasts all day."},
+        {"word": "interfere", "phonetic": "ˌɪntə'fɪə", "partOfSpeech": "v.", "meaning": "干涉, 妨害, 擾亂", "example": "Please don't interfere when I'm working; this job requires my full attention."},
+        {"word": "suspicious", "phonetic": "səs'pɪʃəs", "partOfSpeech": "a.", "meaning": "可疑的, 令人懷疑的", "example": "His reasoning behind the car accident was very suspicious. I think it might actually be his fault after all."},
+        {"word": "exotic", "phonetic": "ɪɡ'zɒtɪk", "partOfSpeech": "a.", "meaning": "具有異國風情的, 外來的", "example": "The flora in Taiwan is exotic to many Western tourists."},
+        {"word": "immense", "phonetic": "ɪ'mens", "partOfSpeech": "a.", "meaning": "巨大的, 無邊無際的", "example": "I'm afraid that this task gives me more responsibility than I can handle. I feel like I have this immense burden on my shoulders."},
+        {"word": "appeal", "phonetic": "ə'pi:l", "partOfSpeech": "n. / v.", "meaning": "吸引, 訴求, 懇求; 上訴", "example": "On the basis of his appeal, I changed my mind about this plan and decided not to go forward with it. / The lawyer decided to appeal their case to the next higher court when the judge handed down an unfavourable decision."},
+        {"word": "subliminal", "phonetic": "sʌb'lɪmɪnəl", "partOfSpeech": "a.", "meaning": "潛意識的, (廣告或訊息) 間接的", "example": "A long time ago movie theatres used to put subliminal messages into movies to try and make customers buy popcorn. I don't know if it actually worked though."},
+        {"word": "manipulate", "phonetic": "mə'nɪpjʊleɪt", "partOfSpeech": "v.", "meaning": "操縱, 控制, 影響", "example": "University scientific researchers are often put under pressure to manipulate the results to suit their sponsors."},
+        {"word": "eliminate", "phonetic": "ɪ'lɪmɪ(ə)neɪt", "partOfSpeech": "v.", "meaning": "除去, 剔除, 淘汰", "example": "I cannot eliminate other job opportunities until I know for sure that Disney will hire me."},
+        {"word": "vigorous", "phonetic": "'vɪɡərəs", "partOfSpeech": "a.", "meaning": "精力充沛的, 健康有活力的", "example": "As well as dieting, vigorous exercise is another way to help you lose weight."},
+        {"word": "alter", "phonetic": "'ɔ:ltə", "partOfSpeech": "v.", "meaning": "改變, 修改 (衣服等)", "example": "The hurricane altered our plans to go to the beach for a picnic."},
+        {"word": "resemble", "phonetic": "rɪ'zembl", "partOfSpeech": "v.", "meaning": "像, 相似", "example": "Whenever he gets angry, I see just how much he resembles his father."},
+        {"word": "identical", "phonetic": "aɪ'dentɪkəl", "partOfSpeech": "a.", "meaning": "完全相同的, 非常相似的", "example": "That store is absolutely identical to the one that was there before. They just changed the name."},
+        {"word": "restore", "phonetic": "rɪ'stɔ:", "partOfSpeech": "v.", "meaning": "恢復, 重建, 修復", "example": "If we get eight hours of sleep, our bodies' energy will be restored."},
+        {"word": "voluntarily", "phonetic": "'vɒləntərɪ(ə)li", "partOfSpeech": "adv.", "meaning": "自願地, 自動地", "example": "He does not voluntarily express his feelings about the relationship between China and Taiwan."},
+        {"word": "drastically", "phonetic": "'dræstɪkli", "partOfSpeech": "adv.", "meaning": "徹底而突然地", "example": "The percentage of people who supported the Labour candidate fell drastically after the debate with his opponent."},
+        {"word": "lapse", "phonetic": "læps", "partOfSpeech": "v.", "meaning": "(契約) 終止, (時間) 流逝, 陷入", "example": "The cancer patient finally lapsed into a coma, giving him relief from his agony."},
+        {"word": "harmonise", "phonetic": "'hɑ:mənaɪz", "partOfSpeech": "v.", "meaning": "使調和, 使和諧", "example": "If human beings can harmonise their lifestyles with nature, their health will improve in many ways."},
+        {"word": "concrete", "phonetic": "'kɒŋkri:t", "partOfSpeech": "a.", "meaning": "具體的, 有形的, 實在的", "example": "Forensic scientists were able to provide concrete evidence of the attacker's identity."},
+        {"word": "arouse", "phonetic": "ə'raʊz", "partOfSpeech": "v.", "meaning": "喚起, 引起, 激發", "example": "Taking a class in investments aroused my interest in business as a whole."},
+        {"word": "compulsive", "phonetic": "kəm'pʌlsɪv", "partOfSpeech": "a.", "meaning": "強制的, 強迫性的, 無法控制或停止的", "example": "He has been fighting a compulsive addiction to smoking for two years."},
+        {"word": "differentiate", "phonetic": "ˌdɪfə'renʃɪeɪt", "partOfSpeech": "v.", "meaning": "區分", "example": "It is important to differentiate between the symptoms of different strains of hepatitis in order to take appropriate action in curing the disease."},
+        {"word": "substantiate", "phonetic": "səb'stænʃɪeɪt", "partOfSpeech": "v.", "meaning": "證明, 證實", "example": "The company appears to be unable to substantiate their claims as to the effectiveness of the herbal medicine. I think it should be taken off the shelves."},
+        {"word": "ethnic", "phonetic": "'eθnɪk", "partOfSpeech": "a.", "meaning": "種族的, 異國的", "example": "My favourite kind of ethnic food is Mexican."},
+        {"word": "decisive", "phonetic": "dɪ'saɪsɪv", "partOfSpeech": "a.", "meaning": "決定性的, 堅決的, 果斷的", "example": "His decision to resign from his position in the office was quite decisive. He actually left that very same day."},
+        {"word": "exuberant", "phonetic": "ɪɡ'zju:bərənt", "partOfSpeech": "a.", "meaning": "(人) 精力充沛的, (植物) 生長繁茂的", "example": "Her attitude towards every situation is always exuberant. I don't know how she manages to have that much energy."},
+        {"word": "predominate", "phonetic": "prɪ'dɒmɪ(ə)neɪt", "partOfSpeech": "v.", "meaning": "支配, 主導, 佔優勢", "example": "People with a liberal ideology predominate at that newspaper, hence most of their articles tend to slant to the left."},
+        {"word": "convey", "phonetic": "kən'veɪ", "partOfSpeech": "v.", "meaning": "運送, 傳達", "example": "It was hard for her to convey her views on that serious issue in such a short amount of time."},
+        {"word": "evoke", "phonetic": "ɪ'vəʊk", "partOfSpeech": "v.", "meaning": "引起, 使憶起", "example": "I don't know why he always evokes such anger in me. I guess his personality is just really irritating."},
+        {"word": "edible", "phonetic": "'edɪ(ə)bl", "partOfSpeech": "a.", "meaning": "可食用的", "example": "Most Westerners don't consider raw eggs edible but people from other cultures eat them that way."},
+        {"word": "penetrate", "phonetic": "'penɪ(ə)treɪt", "partOfSpeech": "v.", "meaning": "看穿, 洞察, 刺破", "example": "The look that she gave me felt as if it were penetrating into my very soul."},
+        {"word": "oddly", "phonetic": "'ɒdli", "partOfSpeech": "adv.", "meaning": "奇怪地, 古怪地", "example": "Oddly enough, the only professor at this school with an MBA degree works in the Department of Sociology."},
+        {"word": "unlikely", "phonetic": "ʌn'laɪkli", "partOfSpeech": "a.", "meaning": "不大可能的", "example": "Because of the changes in the American economy and immigration policies after 9/11, it is unlikely that I will go there to get my PhD."},
+        {"word": "oppose", "phonetic": "ə'pəʊz", "partOfSpeech": "v.", "meaning": "反對", "example": "I'm not opposed to you taking a vacation at Christmas. I just feel that it will be inconvenient considering that we will probably have more customers during that time."},
+        {"word": "priority", "phonetic": "praɪ'ɒrɪ(ə)ti", "partOfSpeech": "n.", "meaning": "優先考量的事, 最重要的人, 優先 (權)", "example": "Your first priority in a romantic relationship should not be what you can get from the other person, but rather what you can do for that person."},
+        {"word": "symbolise", "phonetic": "'sɪmbəlaɪz", "partOfSpeech": "v.", "meaning": "象徵, 以符號代表", "example": "The government officials in Shanghai hope that constructing the world's tallest building will symbolise Shanghai's economic recovery after the destruction caused by the Cultural Revolution."},
+        {"word": "defeat", "phonetic": "dɪ'fi:t", "partOfSpeech": "v.", "meaning": "擊敗, 戰勝, 使...破滅或失敗", "example": "Opposition parties defeated the Labour Welsh Assembly Government in a debate on university tuition fees."},
+        {"word": "recognisable", "phonetic": "'rekəɡnaɪzəbəl", "partOfSpeech": "a.", "meaning": "易於辨認的", "example": "The skyscraper 101 is an easily recognisable landmark on the Taipei skyline as it is the second tallest building in the world."},
+        {"word": "admonish", "phonetic": "əd'mɒnɪʃ", "partOfSpeech": "v.", "meaning": "告誡, 責備", "example": "The professor admonished the students for being late to class."},
+        {"word": "allege", "phonetic": "ə'ledʒ", "partOfSpeech": "v.", "meaning": "(沒有證據的) 指控, 斷言, 主張", "example": "The teacher alleged that the student had cheated in the exam, but could not prove it."},
+        {"word": "allocate", "phonetic": "'æləkeɪt", "partOfSpeech": "v.", "meaning": "撥出, 分配", "example": "The government should allocate more of its health funding to the promotion of exercise to prevent disease."},
+        {"word": "ambiguous", "phonetic": "æm'bɪɡjʊəs", "partOfSpeech": "a.", "meaning": "曖昧的, 不明確的", "example": "When I asked my sister about her first date last night, her answer was rather ambiguous. I hope there's nothing wrong that she's not telling me."},
+        {"word": "accessible", "phonetic": "ək'sesɪ(ə)bəl", "partOfSpeech": "a.", "meaning": "易達到的, 易取得的, 易了解的", "example": "The government should subsidise gene therapy to make it accessible to all and not just the wealthy."},
+        {"word": "considerable", "phonetic": "kən'sɪdərəbəl", "partOfSpeech": "a.", "meaning": "相當多的, 相當大的, 重要的", "example": "After spending considerable time promoting this product, it is disappointing to see it fail."},
+        {"word": "apprehensive", "phonetic": "ˌæprɪ'hensɪv", "partOfSpeech": "a.", "meaning": "擔憂的, 不安的", "example": "After the terrible car accident, the driver was quite apprehensive about getting into a car again."},
+        {"word": "revolutionise", "phonetic": "ˌrevə'lu:ʃənaɪz", "partOfSpeech": "v.", "meaning": "使產生根本性的巨大變革, 徹底改變", "example": "If you really want to revolutionise this business, you have to think of something that nobody else has thought of yet."},
+        {"word": "virtual", "phonetic": "vɜ:tʃʊəl", "partOfSpeech": "a.", "meaning": "實際上的, 實質上的", "example": "During the strike the factory was in a virtual state of shutdown."},
+        {"word": "initial", "phonetic": "ɪnɪʃəl", "partOfSpeech": "a. / n.", "meaning": "最初的, 開始的; 姓名的第一個字母", "example": "My initial response to his comment was to laugh but then I realised that he was being serious."},
+        {"word": "reliable", "phonetic": "rɪ'laɪəbəl", "partOfSpeech": "a.", "meaning": "可靠的, 可信賴的", "example": "The only reliable method of public transportation in my city is the bus."},
+        {"word": "accumulate", "phonetic": "ə'kju:mjʊleɪt", "partOfSpeech": "v.", "meaning": "(經過較長的時間) 累積, 增加", "example": "The longer you work at this company, the more vacation days you will accumulate."},
+        {"word": "contagious", "phonetic": "kən'teɪdʒəs", "partOfSpeech": "a.", "meaning": "傳染性的, (指情緒、感覺方面) 有感染力的", "example": "Her laughter is contagious. As soon as she starts laughing, everybody else does too."},
+        {"word": "favourable", "phonetic": "feɪvərəbəl", "partOfSpeech": "a.", "meaning": "令人高興的, 有幫助的", "example": "The only possible favourable result from this action is that people will have heard of our company's name."},
+        {"word": "ample", "phonetic": "'æmpl", "partOfSpeech": "a.", "meaning": "充足的, 寬闊的", "example": "Living with three other British people gives me ample opportunity to practise my English."},
+        {"word": "convert", "phonetic": "kən'vɜ:t", "partOfSpeech": "v.", "meaning": "改變, 轉換, 使改變信仰", "example": "The government decided to convert the old hospital into a large nursing home."},
+        {"word": "definitive", "phonetic": "dɪ'fɪnɪ(ə)tɪv", "partOfSpeech": "a.", "meaning": "權威的, 最後的", "example": "Stodgeson and Wickham is the definitive reference for the treatment of tropical diseases today; there's none better."},
+        {"word": "obscure", "phonetic": "əb'skjʊə", "partOfSpeech": "a.", "meaning": "難理解的, 不清楚的, 鮮為人知的", "example": "His Arabic is very good, but sometimes he will know the most obscure word, while not understanding some simple sentences."},
+        {"word": "painstaking", "phonetic": "'painzˌteɪkɪŋ", "partOfSpeech": "a.", "meaning": "非常用心、仔細的, 煞費苦心的", "example": "The painstaking research into cures for cancer promises to have many helpful future applications."},
+        {"word": "profound", "phonetic": "prə'faʊnd", "partOfSpeech": "a.", "meaning": "深切的, 完全的", "example": "After he took painting classes, the psychiatrist observed a profound improvement in the patient's mental health."},
+        {"word": "toss-up", "phonetic": "tɒs ʌp", "partOfSpeech": "n.", "meaning": "輸贏各半、平分秋色的狀況", "example": "It's a toss-up between who will be nominated as the new director. It'll be either Helen Jones or Richard Keats."},
+        {"word": "commute", "phonetic": "kə'mju:t", "partOfSpeech": "v.", "meaning": "往來, 通勤", "example": "Nurses should not have to commute to work due to the irregular hours of shifts and the stressful demands of the job. Therefore, the hospital provides accommodation for them."},
+        {"word": "arise", "phonetic": "ə'raɪz", "partOfSpeech": "v.", "meaning": "出現, 發生, 升起", "example": "Health problems can arise as a result of stress combined with inadequate nutrition, both of which are due to overwork."},
+        {"word": "coincide", "phonetic": "kəʊɪn'saɪd", "partOfSpeech": "v.", "meaning": "同時發生, 一致, 相符", "example": "If the results of the two independent studies coincide and are positive, the medical establishment will consider taking the Atkins diet more seriously."},
+        {"word": "incident", "phonetic": "ɪnsɪ(ə)dənt", "partOfSpeech": "n.", "meaning": "事件, (意外的) 插曲或事故", "example": "The bypass operation was completed without incident and the Prime Minister is now recovering in hospital."},
+        {"word": "drastic", "phonetic": "dræstɪk", "partOfSpeech": "a.", "meaning": "極端的, 激烈的", "example": "In emergency war situations, drastic measures such as amputation of limbs are necessary at times."},
+        {"word": "straightforward", "phonetic": "streɪt'fɔ:wəd", "partOfSpeech": "a.", "meaning": "簡單易懂的, 直接了當的, 誠實的", "example": "The CEO of this company likes all of his questions to be answered in a straightforward manner."},
+        {"word": "subsidiary", "phonetic": "səb'sɪdɪəri", "partOfSpeech": "a.", "meaning": "次要的, 輔助的, 附屬的", "example": "There are doctors who believe that diet plays only a subsidiary role in the onset of cancer and that genetics accounts for 85% of the risk factors."},
+        {"word": "passive", "phonetic": "pæsɪv", "partOfSpeech": "a.", "meaning": "被動的, 消極的", "example": "Passive smoking is even more dangerous than that engaged in by the smoker because none of the toxins are filtered out of the burning end of the cigarette."},
+        {"word": "striking", "phonetic": "straɪkɪŋ", "partOfSpeech": "a.", "meaning": "顯著的, 驚人的", "example": "The difference between the number of students using email now and that of five years ago is striking."},
+        {"word": "agitation", "phonetic": "ædʒɪ'teʃən", "partOfSpeech": "n.", "meaning": "憂慮不安, 緊張情勢", "example": "The patient's father was in a state of high agitation after hearing that his daughter's illness might be incurable."},
+        {"word": "coating", "phonetic": "kəʊtɪŋ", "partOfSpeech": "n.", "meaning": "外層 (塗料), 覆蓋層", "example": "The coating on these pills tastes good so that parents won't have trouble administering them to their children."},
+        {"word": "install", "phonetic": "ɪn'stɔ:l", "partOfSpeech": "v.", "meaning": "安裝, 架設, 安頓", "example": "Once this heart rate monitor is installed, we are going to start using it on the patients straight away."},
+        {"word": "insulate", "phonetic": "ɪnsjʊleɪt", "partOfSpeech": "v.", "meaning": "使絕緣, 使隔離 (冷, 熱, 噪音, 電等)", "example": "Households which insulate their homes will receive a government rebate."},
+        {"word": "miniature", "phonetic": "mɪnɪətʃə", "partOfSpeech": "a.", "meaning": "縮影的, 小規模的, 微型的", "example": "In the future, miniature robots will be able to travel through our arteries to repair our bodies."},
+        {"word": "proportionate", "phonetic": "prə'pɔ:ʃənɪ(ə)t", "partOfSpeech": "a.", "meaning": "成比例的, 勻稱的", "example": "Your ideal weight is proportionate not only to your height, but also to the size and density of your bones."},
+        {"word": "cyclic", "phonetic": "saɪklɪk", "partOfSpeech": "a.", "meaning": "循環的, 週期性的", "example": "Because of the cyclic nature of their reproductive system, women are able to eliminate toxins from their body on a regular basis."},
+        {"word": "so-called", "phonetic": "səʊ'kɔ:ld", "partOfSpeech": "a.", "meaning": "所謂的", "example": "His so-called girlfriend actually broke up with him three months ago."},
+        {"word": "reassuring", "phonetic": "ri:ə'ʃʊərɪŋ", "partOfSpeech": "a.", "meaning": "(使) 安心的, 安撫的", "example": "My manager's praise is very reassuring to me. She is always encouraging me to do better."},
+        {"word": "hazardous", "phonetic": "hæzədəs", "partOfSpeech": "a.", "meaning": "危險的, 危害的", "example": "Drinking alcohol and smoking cigarettes are very hazardous to your health."},
+        {"word": "endanger", "phonetic": "ɪn'deɪndʒə", "partOfSpeech": "v.", "meaning": "危害, 使...有危險", "example": "Do not endanger children by placing them within reach of poisonous chemicals."},
+        {"word": "risk", "phonetic": "rɪsk", "partOfSpeech": "v.", "meaning": "冒著...的危險", "example": "I don't smoke because I am not willing to risk my health or that of my unborn child."},
+        {"word": "courtesy", "phonetic": "kɜ:tɪsi", "partOfSpeech": "n.", "meaning": "有禮的舉止, 禮貌", "example": "While I was in the hospital, he did not even have the courtesy to pay me a visit."},
+        {"word": "coincidental", "phonetic": "kəʊɪnsɪ'dentl", "partOfSpeech": "a.", "meaning": "巧合的", "example": "My chance meeting with him on the street was not coincidental—he had planned to run into me."},
+        {"word": "utilise", "phonetic": "ju:tɪlaɪz", "partOfSpeech": "v.", "meaning": "利用", "example": "This software is best utilised in accounting applications."},
+        {"word": "enhance", "phonetic": "ɪn'hɑ:ns", "partOfSpeech": "v.", "meaning": "提升 (品質), 加強", "example": "There are many products out there that claim to enhance a woman's beauty but I think that most of them are useless."},
+        {"word": "qualitative", "phonetic": "kwɒlɪtətɪv", "partOfSpeech": "a.", "meaning": "質的, 品質上的", "example": "Qualitative research is becoming more important than quantitative in the social sciences."},
+        {"word": "contemplate", "phonetic": "kɒntəmpleɪt", "partOfSpeech": "v.", "meaning": "深思, 打算 (未來想做的事或決定)", "example": "The reason that Tim chose to major in philosophy is because he likes to contemplate the meaning of things."},
+        {"word": "neutral", "phonetic": "nju:trəl", "partOfSpeech": "a.", "meaning": "中立的, (聲音、表情) 不帶感情的、沒有意見的", "example": "There are not very many people who have neutral opinions about the topic of gay marriages."},
+        {"word": "bond", "phonetic": "bɒnd", "partOfSpeech": "n.", "meaning": "情感上的緊密結合, 契約, 債券", "example": "The bond between mother and child is said to be one of the most precious there is."},
+        {"word": "scope", "phonetic": "skəʊp", "partOfSpeech": "n.", "meaning": "範圍, 機會, 規模", "example": "The scope of this problem is larger than we originally anticipated."},
+        {"word": "ultimately", "phonetic": "ʌltɪmɪ(ə)tli", "partOfSpeech": "adv.", "meaning": "最終", "example": "I ultimately hope to become fluent in Chinese."},
+        {"word": "attempt", "phonetic": "ə'tempt", "partOfSpeech": "v. / n.", "meaning": "企圖, 嘗試", "example": "Don't even attempt to answer this question. It is way too difficult for you."},
+        {"word": "prolong", "phonetic": "prə'lɒŋ", "partOfSpeech": "v.", "meaning": "延長, 延伸, 拖延", "example": "The more the construction of the building is prolonged, the more money we are going to lose on our investment."},
+        {"word": "craze", "phonetic": "kreɪz", "partOfSpeech": "n.", "meaning": "(一時的) 狂熱, 風潮", "example": "The latest fashion craze in Europe has been girls wearing short skirts."},
+        {"word": "pathetic", "phonetic": "pə'θetɪk", "partOfSpeech": "a.", "meaning": "可憐的, 悲哀的", "example": "I can't believe you graduated from Cambridge and can't find a job. That is absolutely pathetic."},
+        {"word": "conceivable", "phonetic": "kən'si:vəbəl", "partOfSpeech": "a.", "meaning": "可信的, 可想像的, 可能的", "example": "There is no conceivable reason for me to date you."},
+        {"word": "occasionally", "phonetic": "ə'keɪʒənəli", "partOfSpeech": "adv.", "meaning": "偶爾", "example": "Occasionally I like to cook Western style food but most of the time I just eat Chinese."},
+        {"word": "factual", "phonetic": "fæktʃʊəl", "partOfSpeech": "a.", "meaning": "真實的, (根據) 事實的", "example": "We do not have any factual evidence that UFOs actually exist."},
+        {"word": "abide", "phonetic": "ə'baɪd", "partOfSpeech": "v.", "meaning": "遵守, 居留, 停留", "example": "If citizens don't abide by the rules of society, they will be arrested by the police."},
+        {"word": "mimic", "phonetic": "mɪmɪk", "partOfSpeech": "v.", "meaning": "模仿", "example": "The best way to learn a proper British accent is to mimic the way they speak."},
+        {"word": "skeptical", "phonetic": "skeptɪkl", "partOfSpeech": "a.", "meaning": "懷疑的, 多疑的, 不相信的", "example": "The reason that I am skeptical about the promises that you give me is that you tend to not tell me the complete truth."},
+        {"word": "shed", "phonetic": "ʃed", "partOfSpeech": "v.", "meaning": "釋出, 落下, 擺脫, 散發", "example": "His speech shed some light on a medical condition that has been puzzling researchers for many years."},
+        {"word": "surface", "phonetic": "sɜ:fɪ(ə)s", "partOfSpeech": "n. / v.", "meaning": "表面, 外觀; 浮出水面, 出現", "example": "On the surface it may look as if she is fine, but actually her parents are going through a divorce right now."},
+        {"word": "imminent", "phonetic": "ɪmɪ(ə)nənt", "partOfSpeech": "a.", "meaning": "即將發生的, 逼近的", "example": "The closure of a number of post offices in the West Midlands is imminent due to the restructuring and modernisation programme."},
+        {"word": "precarious", "phonetic": "prɪ'keərɪəs", "partOfSpeech": "a.", "meaning": "不穩固的, 不確定的", "example": "Because of the typhoon, the branches of that tree are in a precarious position."},
+        {"word": "improbable", "phonetic": "ɪm'prɒbəbl", "partOfSpeech": "a.", "meaning": "不太可能發生的, 未必是真實的", "example": "It is improbable that they will ever be able to have children."},
+        {"word": "numerous", "phonetic": "nju:mərəs", "partOfSpeech": "a.", "meaning": "極多的, 數目眾多的", "example": "There are numerous places to study English in Taipei but not many of them provide quality education."},
+        {"word": "burial", "phonetic": "berɪəl", "partOfSpeech": "n.", "meaning": "葬禮, 埋葬", "example": "After attending the burial, it was impossible for him to do anything enjoyable for the rest of the day."},
+        {"word": "intrigue", "phonetic": "ɪn'tri:ɡ", "partOfSpeech": "n.", "meaning": "詭計, (對於較神祕或奇特事件的) 興趣", "example": "If it were not for the sense of intrigue that I felt in this subject, I would have dropped the class."},
+        {"word": "lavish", "phonetic": "lævɪʃ", "partOfSpeech": "v. / a.", "meaning": "揮霍, 花費, 給予 (金錢、讚美等); 大量的, 揮霍的", "example": "The parents lavished so much praise on their children when they were young that they ended up spoiled."},
+        {"word": "fearsome", "phonetic": "fɪəsəm", "partOfSpeech": "a.", "meaning": "可怕的, 驚人的", "example": "The chancellor remains a driven man with a fearsome capacity for work."},
+        {"word": "disintegrate", "phonetic": "dɪs'ɪntɪ(ə)ɡreɪt", "partOfSpeech": "v.", "meaning": "使分裂, 崩潰, 瓦解", "example": "After suffering four losses in a row, the team's morale disintegrated."},
+        {"word": "elaborate", "phonetic": "ɪ'læbərɪ(ə)t", "partOfSpeech": "a. / v.", "meaning": "詳盡的; 詳加解釋、說明", "example": "You don't need to give me such an elaborate explanation of what you were doing when you could simply say that you were out."},
+        {"word": "demonstrate", "phonetic": "demənstreɪt", "partOfSpeech": "v.", "meaning": "證明, 示範", "example": "I simply don't understand how to do this. Can you please demonstrate it for me?"},
+        {"word": "diversity", "phonetic": "daɪ'vɜ:sɪ(ə)ti", "partOfSpeech": "n.", "meaning": "變化, 多樣性", "example": "There are fears that human cloning will eventually lead to the loss of genetic diversity in our species as unwanted characteristics are eradicated."},
+        {"word": "crucial", "phonetic": "kru:ʃəl", "partOfSpeech": "a.", "meaning": "決定性的, 重要的", "example": "If you want to recover from heart disease, it is crucial that you undertake a programme of moderate cardiovascular exercise for two hours every day."},
+        {"word": "reluctant", "phonetic": "rɪ'lʌktənt", "partOfSpeech": "a.", "meaning": "不情願的", "example": "Most doctors are reluctant to prescribe sleeping pills unless there is an urgent need for them as they do not cure the root of the problem."},
+        {"word": "unprecedented", "phonetic": "ʌn'presɪ(ə)dentɪd", "partOfSpeech": "a.", "meaning": "前所未有的, 史無前例的", "example": "We are having unprecedented success with the new asthma drug and hope it will be available worldwide in the near future."},
+        {"word": "speculate", "phonetic": "spekjʊleɪt", "partOfSpeech": "v.", "meaning": "思索, 沉思, 推測, 做投機買賣", "example": "The reporter speculated about whether the new government would indeed increase education funding as it had promised in its election campaign."},
+        {"word": "estimate", "phonetic": "estɪ(ə)meɪt", "partOfSpeech": "v.", "meaning": "估計, 估價, 預估", "example": "A preview of the construction plans will help the builders estimate an approximate cost for the project."},
+        {"word": "redundant", "phonetic": "rɪ'dʌndənt", "partOfSpeech": "a.", "meaning": "多餘的, (英) 解雇的、失業的", "example": "The discovery and invention of new antibiotics have helped to render penicillin redundant despite its importance in history."},
+        {"word": "extravagant", "phonetic": "ɪk'strævəɡənt", "partOfSpeech": "a.", "meaning": "揮霍的, 鋪張的, 過度的", "example": "The decorations at our university's commencement ceremonies are very extravagant."},
+        {"word": "tendency", "phonetic": "tendənsi", "partOfSpeech": "n.", "meaning": "傾向, 趨勢", "example": "If your child has a tendency to avoid social interaction with other children and difficulty learning language skills, he could be autistic."},
+        {"word": "attribute", "phonetic": "ə'trɪbju:t", "partOfSpeech": "v.", "meaning": "歸因於", "example": "The man's death was attributed to natural causes."},
+        {"word": "compatible", "phonetic": "kəm'pætɪ(ə)bəl", "partOfSpeech": "a.", "meaning": "可相容的, 可共處的", "example": "The great advantage of the O blood type is that it is compatible with most other types in blood transfusions."},
+        {"word": "cultivate", "phonetic": "kʌltɪ(ə)veɪt", "partOfSpeech": "v.", "meaning": "耕作, 栽培, 培植", "example": "The bacteria from the swabs are cultivated in the laboratory in order to identify the patient's disease."},
+        {"word": "enthusiastic", "phonetic": "ɪnˌθju:zɪ'æstɪk", "partOfSpeech": "a.", "meaning": "熱情的, 充滿熱忱的", "example": "The students at this college are all very enthusiastic about the subjects they are learning."},
+        {"word": "keen", "phonetic": "ki:n", "partOfSpeech": "a.", "meaning": "熱衷的, 激烈的, 敏銳的", "example": "I am very keen on continuing with the plan that we originally made."},
+        {"word": "fabulous", "phonetic": "fæbjʊləs", "partOfSpeech": "a.", "meaning": "極好的, 驚人的", "example": "These herbs are fabulous at assisting weight loss. My sister has lost four kilograms in two weeks."},
+        {"word": "nonetheless", "phonetic": "nʌnðə'les", "partOfSpeech": "adv.", "meaning": "雖然如此, 但是", "example": "You have made a strong recovery over the past week, nonetheless, we will need to keep you in hospital for further observation for at least two more weeks."},
+        {"word": "privileged", "phonetic": "prɪvɪ(ə)lɪdʒd", "partOfSpeech": "a.", "meaning": "享有特權的", "example": "Scientific philosophers have grave concerns that genetically engineered babies may only be available to the privileged classes who have the money to pay for one."},
+        {"word": "extraordinary", "phonetic": "ɪk'strɔ:dɪnəri", "partOfSpeech": "a.", "meaning": "驚人的, 非凡的, 非常特別的", "example": "The patient's full recovery from cancer by changing to a fully organic diet was extraordinary."},
+        {"word": "absurd", "phonetic": "əb'sɜ:d", "partOfSpeech": "a.", "meaning": "荒謬的", "example": "It would be absurd to suggest that the prescription of drugs was the only method to consider in the treatment of disease."},
+        {"word": "overshadow", "phonetic": "əʊvə'ʃædəʊ", "partOfSpeech": "v.", "meaning": "給...蒙上陰影, 使...黯然失色", "example": "When working as a doctor in war-torn countries, it is important not to let small successes be overshadowed by the huge task looming ahead of you."},
+        {"word": "fluctuate", "phonetic": "flʌktʃʊeɪt", "partOfSpeech": "v.", "meaning": "波動, 起伏", "example": "The number of first-year medical students has been fluctuating from year to year due to changing government policies regarding hospitals."},
+        {"word": "inevitable", "phonetic": "ɪ'nevɪtəbəl", "partOfSpeech": "a.", "meaning": "無法避免的, 必然的", "example": "Although death will always be inevitable, in the near future we will be able to delay it for many years."},
+        {"word": "considerably", "phonetic": "kən'sɪdərəbli", "partOfSpeech": "adv.", "meaning": "非常, 相當大地, 很大程度地", "example": "My chances of getting into Harvard increased considerably after my professor wrote me that excellent letter of recommendation."},
+        {"word": "consequently", "phonetic": "kɒnsɪ(ə)kwəntli", "partOfSpeech": "adv.", "meaning": "因此, 所以", "example": "He has a hard time hearing and consequently his family always yells when they want to talk to him."},
+        {"word": "intrusive", "phonetic": "ɪn'tru:sɪv", "partOfSpeech": "a.", "meaning": "強制的, 侵入的, 擾人的", "example": "I considered his intrusive questions about the financial condition of my family an invasion of my privacy."},
+        {"word": "obviously", "phonetic": "ɒbvɪəsli", "partOfSpeech": "adv.", "meaning": "明顯地, 顯而易見地", "example": "The economy obviously suffers after natural disasters strike."},
+        {"word": "perplexed", "phonetic": "pə'plekst", "partOfSpeech": "a.", "meaning": "困惑的, 不知所措的, 混亂的", "example": "Even though the teacher patiently explained the grammar point a number of times, the students were still perplexed."},
+        {"word": "manifest", "phonetic": "mænɪ(ə)fest", "partOfSpeech": "v.", "meaning": "以行動表示或證明, 顯現, 表現", "example": "SARS first manifests itself as a high fever and coughs."},
+        {"word": "passionately", "phonetic": "pæʃənɪ(ə)tli", "partOfSpeech": "adv.", "meaning": "熱情地, 熱烈激昂地", "example": "The lawyer argued for his case passionately but ultimately lost because his reasoning had no logic."},
+        {"word": "reckless", "phonetic": "rekləs", "partOfSpeech": "a.", "meaning": "不顧危險的, 魯莽不智的", "example": "Driving after drinking is reckless behaviour."},
+        {"word": "prevail", "phonetic": "prɪ'veɪl", "partOfSpeech": "v.", "meaning": "佔優勢, 戰勝, 流行, 普及", "example": "He prevailed against all odds to win a seat in parliament. / As long as the people insist on not using condoms, AIDS will continue to prevail."},
+        {"word": "negligent", "phonetic": "neɡlɪdʒənt", "partOfSpeech": "a.", "meaning": "疏忽的, 大意的", "example": "The doctor was sued for his negligent behaviour in failing to inform his patient of the test results."},
+        {"word": "habitually", "phonetic": "hə'bɪtʃʊəli", "partOfSpeech": "adv.", "meaning": "習慣性地", "example": "He smokes habitually. He lights up on the hour."},
+        {"word": "day-to-day", "phonetic": "deɪ tə deɪ", "partOfSpeech": "a.", "meaning": "每天的, 日常的", "example": "My day-to-day schedule consists of school in the morning, a part-time job in the afternoon and studying in the evening."},
+        {"word": "remarkable", "phonetic": "rɪ'mɑ:kəbəl", "partOfSpeech": "a.", "meaning": "了不起的, 傑出的, 特別有趣而引人注目的", "example": "The event yesterday was remarkable because it was the first time that Jews and Protestants in Carlsburg sponsored an event together."},
+        {"word": "radical", "phonetic": "rædɪkəl", "partOfSpeech": "a.", "meaning": "激進的, 極端的", "example": "My professor's ideology is very radical. He believes in socialism so strongly that I wonder sometimes if he is actually a communist."},
+        {"word": "realistic", "phonetic": "rɪə'lɪstɪk", "partOfSpeech": "a.", "meaning": "實際的, 現實的", "example": "The expectations that you have for me are simply not realistic. There is no way that I can fulfil them."},
+        {"word": "turbulent", "phonetic": "tɜ:bjʊlənt", "partOfSpeech": "a.", "meaning": "狂亂的, 動盪不安的", "example": "Due to the turbulent social and political climate in South Africa, hospitals in the poorer townships are being flooded with victims of violence."},
+        {"word": "irreplaceable", "phonetic": "ɪrɪ'pleɪsəbəl", "partOfSpeech": "a.", "meaning": "無法取代的", "example": "Nurse Sloane knows so much about our clinic that she is irreplaceable. We'll have to give her a pay raise so she doesn't leave."},
+        {"word": "breakthrough", "phonetic": "breɪkθru:", "partOfSpeech": "n.", "meaning": "突破, 重大進展", "example": "The discovery of the antibiotic properties of penicillin was a breakthrough for medicine, enabling a whole new realm of possibilities."},
+        {"word": "applied", "phonetic": "ə'plaɪd", "partOfSpeech": "a.", "meaning": "應用的, 實用的", "example": "After completing his MA in Applied Linguistics, he went overseas to forge ahead with his career in the ELT (English Language Teaching) industry."},
+        {"word": "envisage", "phonetic": "ɪn'vɪzɪdʒ", "partOfSpeech": "v.", "meaning": "設設想, 可預見", "example": "Due to the increased incidence of serious flu this year, it's envisaged that free flu shots will be provided to the general public next year."},
+        {"word": "integrated", "phonetic": "ɪntɪ(ə)ɡreɪtɪ(ə)d", "partOfSpeech": "a.", "meaning": "融入的, 整合的", "example": "The basic component of microelectronics is integrated circuits."},
+        {"word": "alternative", "phonetic": "ɔ:l'tɜ:nətɪv", "partOfSpeech": "n.", "meaning": "可選擇的方式, 替代方案", "example": "We must consider every possible alternative before making this decision."},
+        {"word": "tremendous", "phonetic": "trɪ'mendəs", "partOfSpeech": "a.", "meaning": "(體積、數量或程度上) 極大的, 巨大的", "example": "The benefits of moving our factories from the United Kingdom to China are tremendous."},
+        {"word": "cynical", "phonetic": "cynical", "partOfSpeech": "a.", "meaning": "挖苦的, 嘲諷的, 憤世嫉俗的", "example": "He is always so cynical about every suggestion that I make. It makes me not want to work for him anymore."},
+        {"word": "alongside", "phonetic": "əˌlɒŋ'saɪd", "partOfSpeech": "prep.", "meaning": "沿著, 靠著, 在...旁邊", "example": "After my coworkers came alongside me with this plan, everything went much more smoothly."},
+        {"word": "unsurprisingly", "phonetic": "unsurprisingly", "partOfSpeech": "adv.", "meaning": "不令人感到意外地, 不足為奇地", "example": "Unsurprisingly, after the patient took more herbal medicine, his cold became much better."},
+        {"word": "permanently", "phonetic": "pɜ:mənəntli", "partOfSpeech": "adv.", "meaning": "不變地, 恆久地", "example": "This solution will not fix the problem permanently. It will only provide a temporary solution."},
+        {"word": "reinforce", "phonetic": "reinforce", "partOfSpeech": "v.", "meaning": "強化, 支持, 加強", "example": "The fact that English is becoming a more common language reinforces my argument that the world is increasingly becoming more connected."},
+        {"word": "refine", "phonetic": "refine", "partOfSpeech": "v.", "meaning": "改善 (較細微的事物), 使優雅, 使純淨", "example": "Her time with her grandparents in England refined her manners considerably."},
+        {"word": "behalf", "phonetic": "behalf", "partOfSpeech": "n.", "meaning": "代表", "example": "Can you ask him a favour on my behalf?"},
+        {"word": "supplementary", "phonetic": "supplementary", "partOfSpeech": "a.", "meaning": "補充的", "example": "My math level is not high enough to enter college so I need to go to a private school to receive supplementary education."},
+        {"word": "preliminary", "phonetic": "preliminary", "partOfSpeech": "a.", "meaning": "初步的, 開端的", "example": "Before we can begin this class, I have a few preliminary matters to talk about."},
+        {"word": "forthcoming", "phonetic": "forthcoming", "partOfSpeech": "a.", "meaning": "願意 (幫忙或提供訊息) 的, 即將到來的", "example": "Peace between Palestinians and Israelis will be easier to attain if both sides are forthcoming about their needs, intentions and goals."},
+        {"word": "persistent", "phonetic": "persistent", "partOfSpeech": "a.", "meaning": "持續的, 堅持的", "example": "I would have never woken up if not for the persistent ringing of my alarm clock."}
+      ];
+
+      // 讀取本地進度 (只需在組件初始化時執行一次)
+      const savedState = useMemo(() => {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          return saved ? JSON.parse(saved) : null;
+        } catch (e) {
+          console.error("無法讀取存檔", e);
+          return null;
+        }
+      }, []);
+
+      // 狀態初始化 (若有存檔則優先使用存檔，否則使用內建單字集)
+      const [originalCards, setOriginalCards] = useState(savedState?.originalCards || BUILTIN_VOCAB);
+      const [reviewQueue, setReviewQueue] = useState(savedState?.reviewQueue || [...BUILTIN_VOCAB]);
+      const [stats, setStats] = useState(savedState?.stats || { again: 0, hard: 0, good: 0, easy: 0 });
+      const [isFinished, setIsFinished] = useState(savedState?.isFinished || false);
+      const [fileName, setFileName] = useState(savedState?.fileName || 'IELTS 雅思重點單字表-15');
+      
+      const [isFlipped, setIsFlipped] = useState(false); // 每次重整都預設蓋牌
+      const [showInfoModal, setShowInfoModal] = useState(false);
+      const fileInputRef = useRef(null);
+
+      // --- 自動存檔機制 (當關鍵狀態改變時觸發) ---
+      useEffect(() => {
+        if (originalCards.length > 0) {
+          const stateToSave = { originalCards, reviewQueue, stats, isFinished, fileName };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }, [originalCards, reviewQueue, stats, isFinished, fileName]);
+
+      // 語音朗讀功能
+      const speak = useCallback((text) => {
+        if (!text) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      }, []);
+
+      // 解析 CSV 檔案
+      const parseCSV = (text) => {
+        const result = [];
+        const lines = text.split('\n');
+        const startIdx = lines[0].includes('單字') ? 1 : 0;
+        
+        for (let i = startIdx; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          
+          const row = [];
+          let insideQuote = false;
+          let currentWord = '';
+          
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              insideQuote = !insideQuote;
+            } else if (char === ',' && !insideQuote) {
+              row.push(currentWord);
+              currentWord = '';
+            } else {
+              currentWord += char;
+            }
+          }
+          row.push(currentWord);
+          
+          const cleanRow = row.map(str => str.replace(/^"|"$/g, '').trim());
+          
+          if (cleanRow.length >= 2) {
+            result.push({
+              word: cleanRow[0] || '',
+              phonetic: cleanRow[1] || '',
+              partOfSpeech: cleanRow[2] || '',
+              meaning: cleanRow[3] || '',
+              example: cleanRow[4] || '',
+              notes: cleanRow[5] !== '無' ? cleanRow[5] : '',
+            });
+          }
+        }
+        return result;
+      };
+
+      const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          setFileName(file.name);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const text = e.target.result;
+            const parsedCards = parseCSV(text);
+            if (parsedCards.length > 0) {
+              setOriginalCards(parsedCards);
+              setReviewQueue([...parsedCards]);
+              setStats({ again: 0, hard: 0, good: 0, easy: 0 });
+              setIsFinished(false);
+              setIsFlipped(false);
+            } else {
+              alert('無法解析 CSV 檔案，請確認格式是否正確。');
+            }
+            event.target.value = null;
+          };
+          reader.readAsText(file);
+        }
+      };
+
+      const handleRestart = () => {
+        setReviewQueue([...originalCards]);
+        setStats({ again: 0, hard: 0, good: 0, easy: 0 });
+        setIsFinished(false);
+        setIsFlipped(false);
+      };
+
+      const toggleFlip = useCallback(() => {
+        setIsFlipped(true); 
+      }, []);
+
+      const handleSRS = useCallback((type) => {
+        setStats(prev => ({ ...prev, [type]: prev[type] + 1 }));
+        
+        setReviewQueue(prevQueue => {
+          const newQueue = [...prevQueue];
+          const currentCard = newQueue.shift(); 
+          
+          if (type === 'again') {
+            const insertIndex = newQueue.length > 0 ? 1 : 0;
+            newQueue.splice(insertIndex, 0, currentCard);
+          } else if (type === 'hard') {
+            const insertIndex = Math.floor(newQueue.length / 2);
+            newQueue.splice(insertIndex, 0, currentCard);
+          } else if (type === 'good') {
+            newQueue.push(currentCard);
+          }
+          // easy 則直接移除不加回
+
+          if (newQueue.length === 0) setIsFinished(true);
+          return newQueue;
+        });
+        
+        setIsFlipped(false);
+      }, []);
+
+      // 鍵盤事件監聽
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (showInfoModal) {
+            if (e.key === 'Escape') setShowInfoModal(false);
+            return;
+          }
+          if (originalCards.length === 0 || isFinished) return;
+          
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const currentCard = reviewQueue[0];
+            if (currentCard) {
+              if (isFlipped) speak(currentCard.example);
+              else speak(currentCard.word);
+            }
+          } else if (e.key === ' ') {
+            e.preventDefault();
+            if (!isFlipped) toggleFlip();
+          } else if (isFlipped) {
+            if (e.key === '1') handleSRS('again');
+            if (e.key === '2') handleSRS('hard');
+            if (e.key === '3') handleSRS('good');
+            if (e.key === '4') handleSRS('easy');
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [originalCards.length, isFinished, reviewQueue, isFlipped, speak, toggleFlip, handleSRS, showInfoModal]);
+
+      // 自動朗讀功能 (初次載入時因為瀏覽器政策可能不會自動發聲，按Enter即可)
+      useEffect(() => {
+        if (reviewQueue.length > 0 && !isFinished) {
+          const currentCard = reviewQueue[0];
+          if (!isFlipped && currentCard.word) {
+            speak(currentCard.word);
+          } else if (isFlipped && currentCard.example) {
+            speak(currentCard.example);
+          }
+        }
+      }, [reviewQueue[0]?.word, isFlipped, isFinished, speak]);
+
+      // 黑科技預載功能
+      useEffect(() => {
+        if (reviewQueue.length > 0 && !isFinished) {
+          const nextCards = reviewQueue.slice(0, 3);
+          nextCards.forEach(card => {
+            if (card && card.word) {
+              const img = new Image();
+              img.src = `https://loremflickr.com/400/200/${encodeURIComponent(card.word)}`;
+            }
+          });
+        }
+      }, [reviewQueue, isFinished]);
+
+      const progressPercentage = originalCards.length > 0 
+        ? ((originalCards.length - reviewQueue.length) / originalCards.length) * 100 
+        : 0;
+      
+      const currentCard = reviewQueue[0];
+      const currentImageUrl = currentCard ? `https://loremflickr.com/400/200/${encodeURIComponent(currentCard.word)}` : '';
+
+      // 確保全域都能存取上傳按鈕
+      const renderHiddenInput = () => (
+        <input 
+          type="file" 
+          accept=".csv" 
+          className="hidden" 
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+        />
+      );
+
+      // 狀態 1：初始未上傳畫面
+      if (originalCards.length === 0) {
+        return (
+          <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+            {renderHiddenInput()}
+            <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center space-y-6 animate-zoom-in">
+              <div className="w-20 h-20 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                <BrainCircuitIcon size={40} />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800 tracking-tight">SRS 單字記憶艙</h1>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                準備好馴化大腦了嗎？<br/>匯入您的 CSV 檔案，讓演算法幫您將短期記憶轉化為長期記憶。
+              </p>
+              <button 
+                onClick={() => fileInputRef.current.click()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 hover:scale-[1.02] active:scale-95"
+              >
+                <UploadIcon size={20} />
+                匯入 CSV 檔案
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // 狀態 2：結算畫面
+      if (isFinished) {
+        return (
+          <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+            {renderHiddenInput()}
+            <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10 text-center space-y-8 animate-zoom-in">
+              <div className="w-24 h-24 bg-yellow-50 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-2 animate-bounce">
+                <TrophyIcon size={48} />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">完成練習！</h1>
+                <p className="text-gray-500">您已經清空了所有待複習的卡片，太棒了！</p>
+              </div>
+              
+              <div className="bg-gray-50 rounded-2xl p-6 grid grid-cols-2 gap-4 text-left">
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                  <span className="text-xs text-red-400 font-bold mb-1">Again</span>
+                  <span className="text-2xl font-black text-gray-700">{stats.again}</span>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                  <span className="text-xs text-orange-400 font-bold mb-1">Hard</span>
+                  <span className="text-2xl font-black text-gray-700">{stats.hard}</span>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                  <span className="text-xs text-blue-400 font-bold mb-1">Good</span>
+                  <span className="text-2xl font-black text-gray-700">{stats.good}</span>
+                </div>
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                  <span className="text-xs text-green-500 font-bold mb-1">Easy</span>
+                  <span className="text-2xl font-black text-gray-700">{stats.easy}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleRestart}
+                  className="flex-1 bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+                >
+                  <RotateCcwIcon size={20} />
+                  重新開始
+                </button>
+                <button 
+                  onClick={() => fileInputRef.current.click()}
+                  className="px-6 bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-xl transition-all duration-200 flex items-center justify-center active:scale-95"
+                  title="匯入新檔案"
+                >
+                  <UploadIcon size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // 狀態 3：學習主畫面
+      return (
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 sm:py-10 px-4 sm:px-6 relative">
+          {renderHiddenInput()}
+          
+          {/* 快捷鍵說明 Modal */}
+          {showInfoModal && (
+            <div 
+              className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
+              onClick={() => setShowInfoModal(false)}
+            >
+              <div 
+                className="bg-white rounded-[2rem] shadow-2xl p-6 sm:p-8 w-full max-w-sm relative animate-zoom-in"
+                onClick={e => e.stopPropagation()}
+              >
+                <button 
+                  onClick={() => setShowInfoModal(false)} 
+                  className="absolute top-5 right-5 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <XIcon size={20} />
+                </button>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <InfoIcon size={24} className="text-blue-500" />
+                  快捷鍵操作指南
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span className="text-gray-700 font-medium">翻轉卡片</span>
+                    <kbd className="px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm font-sans font-bold text-sm">Space</kbd>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <span className="text-gray-700 font-medium">朗讀單字 / 例句</span>
+                    <kbd className="px-3 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm font-sans font-bold text-sm">Enter</kbd>
+                  </div>
+                  <div className="pt-3">
+                    <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">SRS 難度評分 (卡片背面)</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between p-3 bg-red-50 text-red-700 rounded-xl border border-red-100">
+                        <span className="font-bold text-sm">Again</span>
+                        <kbd className="px-2 py-0.5 bg-white border border-red-200 text-red-700 rounded shadow-sm text-sm">1</kbd>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-orange-50 text-orange-700 rounded-xl border border-orange-100">
+                        <span className="font-bold text-sm">Hard</span>
+                        <kbd className="px-2 py-0.5 bg-white border border-orange-200 text-orange-700 rounded shadow-sm text-sm">2</kbd>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
+                        <span className="font-bold text-sm">Good</span>
+                        <kbd className="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 rounded shadow-sm text-sm">3</kbd>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-green-50 text-green-700 rounded-xl border border-green-100">
+                        <span className="font-bold text-sm">Easy</span>
+                        <kbd className="px-2 py-0.5 bg-white border border-green-200 text-green-700 rounded shadow-sm text-sm">4</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowInfoModal(false)} 
+                  className="w-full mt-8 bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 px-4 rounded-xl transition-all duration-200 active:scale-95"
+                >
+                  我知道了
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="w-full max-w-2xl flex flex-col h-full">
+            
+            {/* 1. 頂部一體化資訊列 */}
+            <div className="w-full flex items-center justify-between bg-white px-3 sm:px-4 py-3 rounded-2xl shadow-sm border border-gray-100 mb-4 gap-2">
+              
+              {/* 左側：進度數字與進度條 */}
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-sm font-black text-gray-700 tracking-wide bg-gray-100 px-3 py-1.5 rounded-lg">
+                  {reviewQueue.length} / {originalCards.length}
+                </span>
+                <div className="hidden sm:block w-24 md:w-32 h-2.5 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-200/50">
+                  <div 
+                    className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progressPercentage}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* 中間：統計數據 (Again/Hard/Good/Easy) */}
+              <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                <span className="text-xs font-bold px-2 sm:px-2.5 py-1.5 rounded-md bg-red-50 text-red-600 border border-red-100" title="Again">{stats.again}</span>
+                <span className="text-xs font-bold px-2 sm:px-2.5 py-1.5 rounded-md bg-orange-50 text-orange-600 border border-orange-100" title="Hard">{stats.hard}</span>
+                <span className="text-xs font-bold px-2 sm:px-2.5 py-1.5 rounded-md bg-blue-50 text-blue-600 border border-blue-100" title="Good">{stats.good}</span>
+                <span className="text-xs font-bold px-2 sm:px-2.5 py-1.5 rounded-md bg-green-50 text-green-600 border border-green-100" title="Easy">{stats.easy}</span>
+              </div>
+
+              {/* 右側：操作按鈕 (上傳與說明) */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors focus:outline-none"
+                  title="匯入新 CSV 檔案"
+                >
+                  <UploadIcon size={20} />
+                </button>
+                <button 
+                  onClick={() => setShowInfoModal(true)}
+                  className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors focus:outline-none"
+                  title="查看快捷鍵說明"
+                >
+                  <InfoIcon size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* 2. 卡片主體 */}
+            <div className="relative w-full bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden flex-1 flex flex-col transition-all duration-300 min-h-[500px]">
+              <div className="flex-1 p-6 sm:p-8 flex flex-col justify-center relative">
+                {!isFlipped ? (
+                  /* 正面 */
+                  <div className="flex flex-col items-center justify-center h-64 sm:h-80 text-center animate-zoom-in">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-5xl sm:text-6xl font-black text-gray-800 tracking-tight">
+                        {currentCard?.word}
+                      </h2>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); speak(currentCard?.word); }}
+                        className="p-3 text-blue-500 hover:bg-blue-50 rounded-full transition-colors flex-shrink-0"
+                      >
+                        <Volume2Icon size={32} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* 背面 */
+                  <div className="flex flex-col h-full animate-slide-up">
+                    
+                    {/* 關聯圖片 */}
+                    <div className="w-full h-36 sm:h-44 rounded-xl overflow-hidden shrink-0 bg-gray-100 mb-4 shadow-inner relative">
+                      <img 
+                        src={currentImageUrl} 
+                        alt={currentCard?.word} 
+                        className="w-full h-full object-cover animate-fade-in"
+                      />
+                      <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-xl pointer-events-none"></div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col space-y-3 pb-2">
+                      <div className="flex items-end gap-3 border-b border-gray-100 pb-2">
+                        <h3 className="text-2xl font-bold text-gray-800 leading-none">{currentCard?.word}</h3>
+                        {currentCard?.phonetic && (
+                          <span className="text-base text-gray-500 font-mono mb-0.5 leading-none">/{currentCard?.phonetic}/</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        {currentCard?.partOfSpeech && (
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded shrink-0 mt-0.5">
+                            {currentCard?.partOfSpeech}
+                          </span>
+                        )}
+                        {currentCard?.meaning && (
+                          <p className="text-lg text-gray-800 font-bold leading-tight">
+                            {currentCard?.meaning}
+                          </p>
+                        )}
+                      </div>
+
+                      {currentCard?.notes && (
+                        <div className="bg-yellow-50/70 border border-yellow-100 text-yellow-800 px-3 py-2 rounded-lg text-sm leading-snug">
+                          {currentCard?.notes}
+                        </div>
+                      )}
+
+                      {currentCard?.example && (
+                        <div className="px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 flex items-start gap-2 group">
+                          <p className="text-base text-gray-600 leading-snug flex-1 italic">
+                            "{currentCard?.example}"
+                          </p>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); speak(currentCard?.example); }}
+                            className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded-full transition-colors shrink-0"
+                          >
+                            <Volume2Icon size={20} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. 底部按鈕極簡化 (僅保留英文單字) */}
+                    <div className="pt-3 mt-3 border-t border-gray-100 grid grid-cols-4 gap-2 sm:gap-4 shrink-0">
+                      <button onClick={() => handleSRS('again')} className="py-3 sm:py-4 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white transition-all duration-200 active:scale-95 flex items-center justify-center">
+                        <span className="text-sm sm:text-base font-black uppercase tracking-wider">Again</span>
+                      </button>
+                      <button onClick={() => handleSRS('hard')} className="py-3 sm:py-4 rounded-xl bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white transition-all duration-200 active:scale-95 flex items-center justify-center">
+                        <span className="text-sm sm:text-base font-black uppercase tracking-wider">Hard</span>
+                      </button>
+                      <button onClick={() => handleSRS('good')} className="py-3 sm:py-4 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white transition-all duration-200 active:scale-95 flex items-center justify-center">
+                        <span className="text-sm sm:text-base font-black uppercase tracking-wider">Good</span>
+                      </button>
+                      <button onClick={() => handleSRS('easy')} className="py-3 sm:py-4 rounded-xl bg-green-50 hover:bg-green-500 text-green-600 hover:text-white transition-all duration-200 active:scale-95 flex items-center justify-center">
+                        <span className="text-sm sm:text-base font-black uppercase tracking-wider">Easy</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 正面專用的看解答按鈕 */}
+            {!isFlipped && (
+              <div className="mt-6 flex justify-center">
+                <button 
+                  onClick={toggleFlip}
+                  className="w-full max-w-sm flex items-center justify-center gap-3 bg-gray-800 hover:bg-gray-900 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-gray-200 transition-all duration-200 hover:scale-[1.02] active:scale-95 text-lg"
+                >
+                  <RotateCwIcon size={24} />
+                  <span>看解答 (Space)</span>
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      );
+    };
+
+    // 掛載 React 到 DOM
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+>>>>>>> d1f912f ([feat: 整合雅思單字集並優化 iPhone 瀏覽體驗])
 </html>
