@@ -95,11 +95,11 @@
         {"word": "considerable", "phonetic": "kən'sɪdərəbəl", "partOfSpeech": "a.", "meaning": "相當多的, 相當大的, 重要的", "example": "After spending considerable time promoting this product, it is disappointing to see it fail."},
         {"word": "apprehensive", "phonetic": "ˌæprɪ'hensɪv", "partOfSpeech": "a.", "meaning": "擔憂的, 不安的", "example": "After the terrible car accident, the driver was quite apprehensive about getting into a car again."},
         {"word": "revolutionise", "phonetic": "ˌrevə'lu:ʃənaɪz", "partOfSpeech": "v.", "meaning": "使產生根本性的巨大變革, 徹底改變", "example": "If you really want to revolutionise this business, you have to think of something that nobody else has thought of yet."},
-        {"word": "virtual", "phonetic": "vɜ:tʃʊəl", "partOfSpeech": "a.", "meaning": "實際上的, 實質上的", "example": "During the strike the factory was in a virtual state of shutdown."},
+        {"word": "virtual", "phonetic": "vɜ:tʃʊəl", "partOfSpeech": "a.", "meaning": "實際上的,實質上的", "example": "During the strike the factory was in a virtual state of shutdown."},
         {"word": "initial", "phonetic": "ɪnɪʃəl", "partOfSpeech": "a. / n.", "meaning": "最初的, 開始的; 姓名的第一個字母", "example": "My initial response to his comment was to laugh but then I realised that he was being serious."},
         {"word": "reliable", "phonetic": "rɪ'laɪəbəl", "partOfSpeech": "a.", "meaning": "可靠的, 可信賴的", "example": "The only reliable method of public transportation in my city is the bus."},
         {"word": "accumulate", "phonetic": "ə'kju:mjʊleɪt", "partOfSpeech": "v.", "meaning": "(經過較長的時間) 累積, 增加", "example": "The longer you work at this company, the more vacation days you will accumulate."},
-        {"word": "contagious", "phonetic": "kən'teɪdʒəs", "partOfSpeech": "a.", "meaning": "傳染性的, (指情緒、感覺方面) 有感染力的", "example": "Her laughter is contagious. As soon as she starts laughing, everybody else does too."},
+        {"word": "contagious", "phonetic": "kən'teɪdʒəs", "partOfSpeech": "a.", "meaning": "傳染性的, 有感染力的", "example": "Her laughter is contagious. As soon as she starts laughing, everybody else does too."},
         {"word": "favourable", "phonetic": "feɪvərəbəl", "partOfSpeech": "a.", "meaning": "令人高興的, 有幫助的", "example": "The only possible favourable result from this action is that people will have heard of our company's name."},
         {"word": "ample", "phonetic": "'æmpl", "partOfSpeech": "a.", "meaning": "充足的, 寬闊的", "example": "Living with three other British people gives me ample opportunity to practise my English."},
         {"word": "convert", "phonetic": "kən'vɜ:t", "partOfSpeech": "v.", "meaning": "改變, 轉換, 使改變信仰", "example": "The government decided to convert the old hospital into a large nursing home."},
@@ -230,7 +230,7 @@
       const [originalCards] = useState(BUILTIN_VOCAB);
       const [reviewQueue, setReviewQueue] = useState(savedState?.reviewQueue || [...BUILTIN_VOCAB]);
       const [stats, setStats] = useState(savedState?.stats || { again: 0, hard: 0, good: 0, easy: 0 });
-      const [sessionCount, setSessionCount] = useState(savedState?.sessionCount || 0); // 紀錄本次點擊次數
+      const [sessionCount, setSessionCount] = useState(savedState?.sessionCount || 0); 
       const [cardLevels, setCardLevels] = useState(savedState?.cardLevels || {});
       const [isFinished, setIsFinished] = useState(savedState?.isFinished || false);
       const [isFlipped, setIsFlipped] = useState(false);
@@ -286,14 +286,20 @@
         const currentCard = reviewQueue[0];
         setCardLevels(prev => ({ ...prev, [currentCard.word]: type }));
         setStats(prev => ({ ...prev, [type]: prev[type] + 1 }));
-        setSessionCount(prev => prev + 1); // 點擊就增加計數
+        setSessionCount(prev => prev + 1); 
         
         setReviewQueue(prevQueue => {
           const newQueue = [...prevQueue];
           const card = newQueue.shift(); 
-          if (type === 'again') newQueue.splice(newQueue.length > 0 ? 1 : 0, 0, card);
-          else if (type === 'hard') newQueue.splice(Math.floor(newQueue.length / 2), 0, card);
-          else if (type === 'good') newQueue.push(card);
+          if (type === 'again') {
+            // 改為 5 張後再次出現
+            const insertIndex = Math.min(newQueue.length, 5);
+            newQueue.splice(insertIndex, 0, card);
+          } else if (type === 'hard') {
+            newQueue.splice(Math.floor(newQueue.length / 2), 0, card);
+          } else if (type === 'good') {
+            newQueue.push(card);
+          }
           if (newQueue.length === 0) setIsFinished(true);
           return newQueue;
         });
@@ -319,10 +325,8 @@
         return () => window.removeEventListener('keydown', handleKeyDown);
       }, [isFinished, reviewQueue, isFlipped, speak, toggleFlip, handleSRS, showInfoModal]);
 
-      // 已掌握數量 = 總數 - 剩餘在對列中的數量
       const masteredCount = originalCards.length - reviewQueue.length;
       const masteryPercentage = (masteredCount / originalCards.length) * 100;
-      
       const currentCard = reviewQueue[0];
       const currentImageUrl = currentCard ? `https://loremflickr.com/400/200/${encodeURIComponent(currentCard.word)}` : '';
 
@@ -357,14 +361,13 @@
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><InfoIcon size={24} className="text-blue-500"/>設定與紀錄</h3>
                 <div className="space-y-3">
                   <button onClick={handleExport} className="w-full p-4 bg-blue-50 text-blue-700 rounded-xl font-bold flex items-center justify-center gap-2"><DownloadIcon size={18}/>匯出學習紀錄 (.csv)</button>
-                  <button onClick={handleClearSave} className="w-full p-4 bg-red-50 text-red-600 rounded-xl font-bold flex items-center justify-center gap-2"><Trash2Icon size={18}/>清除所有進度</button>
+                  <button onClick={handleClearSave} className="w-full p-4 bg-red-100 text-red-600 rounded-xl font-bold flex items-center justify-center gap-2"><Trash2Icon size={18}/>清除所有進度</button>
                 </div>
               </div>
             </div>
           )}
 
           <div className="w-full max-w-2xl flex flex-col h-full space-y-4">
-            {/* 詳細進度列 */}
             <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-3">
               <div className="flex justify-between items-center text-sm font-bold">
                 <div className="flex items-center gap-3">
@@ -374,13 +377,12 @@
                   </div>
                   <div className="h-8 w-px bg-gray-100 mx-1"></div>
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">本次練習</span>
-                    <span className="text-blue-600 font-black">第 {sessionCount + 1} 次複習</span>
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider">學習歷程</span>
+                    <span className="text-blue-600 font-black">第 {sessionCount + 1} 張圖卡</span>
                   </div>
                 </div>
                 <button onClick={() => setShowInfoModal(true)} className="p-1 text-gray-400"><InfoIcon size={20}/></button>
               </div>
-              
               <div className="flex gap-2">
                 {['again', 'hard', 'good', 'easy'].map(k => (
                   <div key={k} className={`flex-1 px-2 py-1 rounded-lg text-center border ${k==='again'?'bg-red-50 text-red-600 border-red-100':k==='hard'?'bg-orange-50 text-orange-600 border-orange-100':k==='good'?'bg-blue-50 text-blue-600 border-blue-100':'bg-green-50 text-green-600 border-green-100'}`}>
@@ -389,7 +391,6 @@
                   </div>
                 ))}
               </div>
-              
               <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${masteryPercentage}%` }}></div>
               </div>
