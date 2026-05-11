@@ -5,6 +5,8 @@
 [![Styling: Tailwind](https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Device: iPhone Optimized](https://img.shields.io/badge/Device-iPhone_Optimized-black?logo=apple&logoColor=white)](#-iphone-使用指南)
 
+[**English**](README.en.md) | **中文**
+
 這是一個專為「極速學習」打造的單字記憶工具，導入了 **Anki 核心的 SRS (Spaced Repetition System)** 間隔重複系統。透過精準的演算法與視覺化輔助，幫助您將短期記憶高效轉化為長期記憶。
 
 > **"Smart is the New Sexy. 讓學習變得優雅、高效且毫無阻力。"**
